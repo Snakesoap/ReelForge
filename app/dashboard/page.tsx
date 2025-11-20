@@ -15,6 +15,7 @@ export default function Dashboard() {
   const [generationStatus, setGenerationStatus] = useState('');
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [videoStats, setVideoStats] = useState<any>(null);
+  const [purchasingCredits, setPurchasingCredits] = useState(false);
 
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
@@ -130,6 +131,34 @@ export default function Dashboard() {
     }
   };
 
+  const handlePurchaseCredits = async (creditAmount: number) => {
+    if (!user?.email) return;
+    
+    setPurchasingCredits(true);
+    try {
+      const response = await fetch('/api/checkout/credits', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId: user.email,
+          email: user.email,
+          creditAmount,
+        }),
+      });
+
+      const data = await response.json();
+      if (data.url) {
+        window.location.href = data.url;
+      } else {
+        setError('Failed to start checkout');
+        setPurchasingCredits(false);
+      }
+    } catch (err: any) {
+      setError(err.message || 'Checkout failed');
+      setPurchasingCredits(false);
+    }
+  };
+
   const handleSignOut = () => {
     localStorage.removeItem('currentUser');
     router.push('/');
@@ -200,6 +229,29 @@ export default function Dashboard() {
               {generating ? `Generating... (Status: ${generationStatus || 'Starting'})` : 'Generate Video'}
             </button>
           </form>
+        </div>
+
+        <div className="bg-slate-800 border border-slate-700 rounded-lg p-8 mb-12">
+          <h2 className="text-2xl font-bold mb-6">Need More Credits?</h2>
+          <p className="text-slate-400 mb-6">Run out of credits? No problem! Purchase additional credits anytime.</p>
+          <div className="grid grid-cols-4 gap-4">
+            {[
+              { credits: 10, price: 15.0 },
+              { credits: 25, price: 37.5 },
+              { credits: 50, price: 75.0 },
+              { credits: 100, price: 150.0 },
+            ].map(({ credits, price }) => (
+              <button
+                key={credits}
+                onClick={() => handlePurchaseCredits(credits)}
+                disabled={purchasingCredits}
+                className="border border-cyan-500/50 rounded-lg p-4 hover:bg-slate-700/50 transition disabled:opacity-50 text-center"
+              >
+                <p className="text-cyan-400 text-2xl font-bold">{credits}</p>
+                <p className="text-white font-semibold">${price.toFixed(2)}</p>
+              </button>
+            ))}
+          </div>
         </div>
 
         {videoUrl && (
