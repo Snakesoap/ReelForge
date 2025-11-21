@@ -2,6 +2,41 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
+const MODELS = [
+  {
+    id: 'seedance-1-pro-fast',
+    name: 'Seedance 1 Pro Fast',
+    provider: 'Replicate',
+    credits: 0.4,
+    description: 'Fast, high-quality videos. Perfect for quick turnarounds.',
+    cost: '$0.36',
+  },
+  {
+    id: 'gen-4-turbo',
+    name: 'Runway Gen-4 Turbo',
+    provider: 'Runway',
+    credits: 0.3,
+    description: 'Fastest generation with excellent quality.',
+    cost: '$0.30',
+  },
+  {
+    id: 'gen-4',
+    name: 'Runway Gen-4',
+    provider: 'Runway',
+    credits: 0.8,
+    description: 'High-quality, cinematic videos.',
+    cost: '$0.72',
+  },
+  {
+    id: 'veo-3-1',
+    name: 'Runway Veo 3.1',
+    provider: 'Runway',
+    credits: 2.7,
+    description: 'Premium quality with advanced features. Coming soon.',
+    cost: '$2.40',
+  },
+];
+
 export default function Dashboard() {
   const router = useRouter();
   const [user, setUser] = useState<any>(null);
@@ -16,6 +51,7 @@ export default function Dashboard() {
   const [estimatedTime, setEstimatedTime] = useState(0);
   const [videoStats, setVideoStats] = useState<any>(null);
   const [purchasingCredits, setPurchasingCredits] = useState(false);
+  const [selectedModel, setSelectedModel] = useState('seedance-1-pro-fast');
 
   useEffect(() => {
     const currentUser = localStorage.getItem('currentUser');
@@ -107,11 +143,13 @@ export default function Dashboard() {
         body: JSON.stringify({
           prompt,
           userId: user.email,
+          model: selectedModel,
         }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to start video generation');
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to start video generation');
       }
 
       const data = await response.json();
@@ -166,6 +204,8 @@ export default function Dashboard() {
 
   if (loading) return <div className="min-h-screen bg-slate-900 flex items-center justify-center"><div>Loading...</div></div>;
 
+  const selectedModelData = MODELS.find(m => m.id === selectedModel);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
       <header className="border-b border-slate-700/50 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
@@ -209,6 +249,32 @@ export default function Dashboard() {
                 {estimatedTime > 0 && <p className="text-sm">Estimated time: {estimatedTime} seconds</p>}
               </div>
             )}
+
+            <div>
+              <label className="block text-sm font-medium mb-2">Select Model</label>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {MODELS.map((model) => (
+                  <button
+                    key={model.id}
+                    type="button"
+                    onClick={() => setSelectedModel(model.id)}
+                    className={`p-4 rounded-lg border-2 text-left transition ${
+                      selectedModel === model.id
+                        ? 'border-cyan-500 bg-slate-700/50'
+                        : 'border-slate-600 bg-slate-700/20 hover:border-slate-500'
+                    } ${model.id === 'veo-3-1' ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    disabled={model.id === 'veo-3-1'}
+                  >
+                    <p className="font-semibold">{model.name}</p>
+                    <p className="text-sm text-slate-400">{model.description}</p>
+                    <div className="flex justify-between items-center mt-2">
+                      <span className="text-xs text-cyan-400">{model.credits} credits</span>
+                      <span className="text-sm text-slate-300">{model.cost}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
 
             <div>
               <label className="block text-sm font-medium mb-2">Video Prompt</label>
