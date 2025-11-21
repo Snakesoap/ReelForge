@@ -55,7 +55,7 @@ export async function GET(request: NextRequest) {
 
       if (prediction.status === 'succeeded') {
         status = 'succeeded';
-        videoUrl = prediction.output?.[0] || null;
+        videoUrl = prediction.output || null;
       } else if (prediction.status === 'failed') {
         status = 'failed';
       } else if (prediction.status === 'processing') {
