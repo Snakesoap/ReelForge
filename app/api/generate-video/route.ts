@@ -76,7 +76,7 @@ export async function POST(request: NextRequest) {
     } else {
       // Use Replicate
       const prediction = await replicate.predictions.create({
-        version: '84e7c4c77970f2e5586aead91e142e21a7a1a4a0a33333333333333333333333', // Seedance version - update with actual
+        version: 'bytedance/seedance-1-pro-fast:latest', // Seedance version - update with actual
         input: {
           prompt,
           seconds: 6,
