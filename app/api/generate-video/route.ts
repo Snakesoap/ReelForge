@@ -1,112 +1,123 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Replicate from 'replicate';
 import { createClient } from '@supabase/supabase-js';
-import { deductCredits, getUserCredits, MODEL_CREDITS } from '@/lib/stripe-service';
+import { deductCredits } from '@/lib/stripe-service';
+import { generateVideoWithRunway } from '@/lib/runway-service';
 
 const replicate = new Replicate({
-  auth: process.env.REPLICATE_API_KEY,
+  auth: process.env.REPLICATE_API_TOKEN,
 });
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const supabase = createClient(supabaseUrl, supabaseKey);
 
-const supabase = createClient(supabaseUrl!, supabaseKey!);
-
-// Model costs (actual API costs)
-const MODEL_COSTS = {
-  'seedance-1-pro-fast': 0.36,
-  'gen-4-turbo': 0.30,
-  'gen-4': 0.72,
-  'veo-3': 2.40,
-  'veo-3-1': 2.40,
-  'veo-3-1-fast': 0.90,
-} as const;
+const MODEL_DETAILS: { [key: string]: { credits: number; provider: 'replicate' | 'runway'; name: string } } = {
+  'seedance-1-pro-fast': {
+    credits: 0.4,
+    provider: 'replicate',
+    name: 'Seedance 1 Pro Fast',
+  },
+  'gen-4-turbo': {
+    credits: 0.3,
+    provider: 'runway',
+    name: 'Runway Gen-4 Turbo',
+  },
+  'gen-4': {
+    credits: 0.8,
+    provider: 'runway',
+    name: 'Runway Gen-4',
+  },
+  'veo-3-1': {
+    credits: 2.7,
+    provider: 'runway',
+    name: 'Runway Veo 3.1',
+  },
+};
 
 export async function POST(request: NextRequest) {
   try {
     const { prompt, userId, model = 'seedance-1-pro-fast' } = await request.json();
 
-    console.log('Received:', { prompt, userId, model });
-
     if (!prompt || !userId) {
-      return NextResponse.json({ error: 'Missing fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    }
+
+    const modelInfo = MODEL_DETAILS[model];
+    if (!modelInfo) {
+      return NextResponse.json({ error: 'Invalid model selected' }, { status: 400 });
     }
 
     // Check if user has enough credits
-    const userCredits = await getUserCredits(userId);
-    const creditsNeeded = MODEL_CREDITS[model as keyof typeof MODEL_CREDITS] || 1;
+    const { data: userData } = await supabase
+      .from('user_subscriptions')
+      .select('credits_remaining')
+      .eq('user_id', userId)
+      .single();
 
-    console.log(`User credits remaining: ${userCredits.creditsRemaining}, Credits needed: ${creditsNeeded}`);
-
-    if (userCredits.creditsRemaining < creditsNeeded) {
+    if (!userData || userData.credits_remaining < modelInfo.credits) {
       return NextResponse.json(
-        { 
-          error: 'Insufficient credits',
-          creditsNeeded,
-          creditsRemaining: userCredits.creditsRemaining,
-          tier: userCredits.tier,
-        },
-        { status: 402 } // 402 Payment Required
+        { error: `Insufficient credits. You need ${modelInfo.credits} credits but have ${userData?.credits_remaining || 0}` },
+        { status: 402 }
       );
     }
 
-    // Start the video generation on Replicate
-    const prediction = await replicate.predictions.create({
-      model: `bytedance/${model}`,
-      input: {
-        prompt,
-        duration: 6,
-        resolution: '1080p',
-        aspect_ratio: '16:9',
-        camera_fixed: false,
-        fps: 24,
-      },
-    });
+    // Generate video based on provider
+    let generationId: string;
+    let provider: string;
+    let estimatedDurationSeconds = 30;
 
-    console.log('Prediction created:', prediction);
-
-    // Get the cost for this model
-    const costToUs = MODEL_COSTS[model as keyof typeof MODEL_COSTS] || 0.36;
-
-    // Deduct credits immediately (before video completes, to prevent race conditions)
-    try {
-      await deductCredits(userId, prediction.id, model, costToUs);
-      console.log(`Credits deducted for user ${userId}: ${creditsNeeded} credits`);
-    } catch (creditError) {
-      console.error('Error deducting credits:', creditError);
-      // Don't fail - let the video generate but log the error
-    }
-
-    // Log to database
-    const { data, error } = await supabase
-      .from('videos')
-      .insert([
-        {
-          generation_id: prediction.id,
-          user_id: userId,
-          prompt: prompt,
-          status: prediction.status,
-          model: model,
-          duration: 6,
-          resolution: '1080p',
-          cost: costToUs,
-          created_at: new Date().toISOString(),
+    if (modelInfo.provider === 'runway') {
+      // Use Runway API
+      const result = await generateVideoWithRunway(prompt, model);
+      generationId = result.taskId;
+      provider = 'runway';
+      estimatedDurationSeconds = 60; // Runway takes longer typically
+    } else {
+      // Use Replicate
+      const prediction = await replicate.predictions.create({
+        version: '84e7c4c77970f2e5586aead91e142e21a7a1a4a0a33333333333333333333333', // Seedance version - update with actual
+        input: {
+          prompt,
+          seconds: 6,
+          ratio: '16:9',
         },
-      ]);
+      });
 
-    if (error) {
-      console.error('Database error:', error);
-      // Don't fail the request if database logging fails
+      generationId = prediction.id;
+      provider = 'replicate';
     }
+
+    // Create video record in database
+    const { data: videoRecord } = await supabase
+      .from('videos')
+      .insert({
+        generation_id: generationId,
+        user_id: userId,
+        prompt,
+        model,
+        provider,
+        status: 'starting',
+        created_at: new Date().toISOString(),
+      })
+      .select()
+      .single();
+
+    // Deduct credits
+    await deductCredits(userId, generationId, model, modelInfo.credits);
 
     return NextResponse.json({
-      generationId: prediction.id,
-      status: prediction.status,
-      creditsDeducted: creditsNeeded,
-      creditsRemaining: userCredits.creditsRemaining - creditsNeeded,
+      generationId,
+      status: 'starting',
+      estimatedDurationSeconds,
+      provider,
+      model,
     });
-  } catch (error) {
-    console.error('API error:', error);
-    return NextResponse.json({ error: 'Server error', details: String(error) }, { status: 500 });
+  } catch (error: any) {
+    console.error('Video generation error:', error);
+    return NextResponse.json(
+      { error: error.message || 'Video generation failed' },
+      { status: 500 }
+    );
   }
 }
