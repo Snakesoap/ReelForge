@@ -16,19 +16,34 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      const user = users.find((u: any) => u.email === email && u.password === password);
-
-      if (!user) {
-        setError('Invalid email or password');
+      if (!email || !password) {
+        setError('Email and password required');
         setLoading(false);
         return;
       }
 
+      // Call the login API route
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Invalid email or password');
+        setLoading(false);
+        return;
+      }
+
+      // Store user session in localStorage
       localStorage.setItem('currentUser', JSON.stringify({ email }));
+
+      // Redirect to dashboard
       router.push('/dashboard');
     } catch (err: any) {
-      setError(err.message || 'Failed to sign in');
+      setError(err.message || 'Failed to login');
       setLoading(false);
     }
   };
@@ -42,7 +57,7 @@ export default function Login() {
             <span className="text-2xl font-bold">ReelForge</span>
           </div>
           <h1 className="text-3xl font-bold">Welcome Back</h1>
-          <p className="text-slate-400 mt-2">Sign in to continue</p>
+          <p className="text-slate-400 mt-2">Sign in to your account</p>
         </div>
 
         <form onSubmit={handleLogin} className="bg-slate-800 border border-slate-700 rounded-lg p-8 space-y-4">
@@ -60,6 +75,7 @@ export default function Login() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
               placeholder="your@email.com"
+              required
             />
           </div>
 
@@ -71,15 +87,20 @@ export default function Login() {
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
               placeholder="password"
+              required
             />
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-slate-900 py-2 rounded-lg font-semibold hover:bg-cyan-400 transition disabled:opacity-50">
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-cyan-500 text-slate-900 py-2 rounded-lg font-semibold hover:bg-cyan-400 transition disabled:opacity-50"
+          >
             {loading ? 'Signing In...' : 'Sign In'}
           </button>
 
           <p className="text-center text-slate-400 text-sm">
-            No account? <Link href="/signup" className="text-cyan-400 hover:text-cyan-300">Sign Up</Link>
+            Don't have an account? <Link href="/signup" className="text-cyan-400 hover:text-cyan-300">Sign Up</Link>
           </p>
         </form>
       </div>
