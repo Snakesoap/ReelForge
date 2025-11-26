@@ -22,17 +22,31 @@ export default function SignUp() {
         return;
       }
 
-      const users = JSON.parse(localStorage.getItem('users') || '[]');
-      if (users.find((u: any) => u.email === email)) {
-        setError('Email already exists');
+      if (password.length < 6) {
+        setError('Password must be at least 6 characters');
         setLoading(false);
         return;
       }
 
-      users.push({ email, password });
-      localStorage.setItem('users', JSON.stringify(users));
+      // Call the signup API route
+      const response = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        setError(data.error || 'Failed to sign up');
+        setLoading(false);
+        return;
+      }
+
+      // Store user session in localStorage (or use Supabase session storage)
       localStorage.setItem('currentUser', JSON.stringify({ email }));
 
+      // Redirect to dashboard
       router.push('/dashboard');
     } catch (err: any) {
       setError(err.message || 'Failed to sign up');
@@ -49,7 +63,7 @@ export default function SignUp() {
             <span className="text-2xl font-bold">ReelForge</span>
           </div>
           <h1 className="text-3xl font-bold">Create Account</h1>
-          <p className="text-slate-400 mt-2">Start creating videos</p>
+          <p className="text-slate-400 mt-2">Start creating videos with AI</p>
         </div>
 
         <form onSubmit={handleSignUp} className="bg-slate-800 border border-slate-700 rounded-lg p-8 space-y-4">
@@ -67,6 +81,7 @@ export default function SignUp() {
               onChange={(e) => setEmail(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
               placeholder="your@email.com"
+              required
             />
           </div>
 
@@ -77,17 +92,28 @@ export default function SignUp() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               className="w-full bg-slate-700 border border-slate-600 rounded-lg px-4 py-2 text-white focus:outline-none focus:border-cyan-500"
-              placeholder="password"
+              placeholder="At least 6 characters"
+              required
+              minLength={6}
             />
           </div>
 
-          <button type="submit" disabled={loading} className="w-full bg-cyan-500 text-slate-900 py-2 rounded-lg font-semibold hover:bg-cyan-400 transition disabled:opacity-50">
-            {loading ? 'Creating...' : 'Sign Up'}
+          <button 
+            type="submit" 
+            disabled={loading} 
+            className="w-full bg-cyan-500 text-slate-900 py-2 rounded-lg font-semibold hover:bg-cyan-400 transition disabled:opacity-50"
+          >
+            {loading ? 'Creating Account...' : 'Sign Up'}
           </button>
 
-          <p className="text-center text-slate-400 text-sm">
-            Have an account? <Link href="/login" className="text-cyan-400 hover:text-cyan-300">Sign In</Link>
-          </p>
+          <div className="text-center">
+            <p className="text-slate-400 text-sm mb-3">
+              Have an account? <Link href="/login" className="text-cyan-400 hover:text-cyan-300">Sign In</Link>
+            </p>
+            <p className="text-slate-500 text-xs">
+              New accounts start with 0 credits. Purchase credits to begin creating videos.
+            </p>
+          </div>
         </form>
       </div>
     </div>
