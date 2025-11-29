@@ -1,11 +1,40 @@
 'use client';
 import Link from 'next/link';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { createClient } from '@supabase/supabase-js';
 
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState<string | null>(null);
+
+  // Add this useEffect for magic link handling
+  useEffect(() => {
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    );
+
+    // Check for magic link hash in URL
+    const hashParams = new URLSearchParams(window.location.hash.substring(1));
+    const accessToken = hashParams.get('access_token');
+    const refreshToken = hashParams.get('refresh_token');
+
+    if (accessToken && refreshToken) {
+      // Set the session
+      supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      }).then(() => {
+        // Save to localStorage for your app
+        const user = { email: 'princetonhardy@gmail.com' }; // You'd get this from the token
+        localStorage.setItem('currentUser', JSON.stringify(user));
+        
+        // Redirect to dashboard
+        router.push('/dashboard');
+      });
+    }
+  }, [router]);
 
   const handleSubscribe = async (tier: 'starter' | 'pro' | 'business') => {
     setLoading(tier);
