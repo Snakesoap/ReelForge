@@ -129,20 +129,7 @@ export default function Home() {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800">
-      <header className="border-b border-slate-700/50 sticky top-0 z-50 bg-slate-900/80 backdrop-blur">
-        <nav className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-cyan-500 rounded-lg"></div>
-            <span className="text-xl font-bold">ReelForge</span>
-          </div>
-          <div className="flex gap-4">
-            <Link href="/login" className="px-4 py-2 rounded-lg hover:bg-slate-800 transition">Sign In</Link>
-            <Link href="/signup" className="px-4 py-2 bg-cyan-500 text-slate-900 rounded-lg font-semibold hover:bg-cyan-400 transition">Get Started</Link>
-          </div>
-        </nav>
-      </header>
-
+    <div>
       <section className="max-w-6xl mx-auto px-6 py-20 text-center">
         <h1 className="text-5xl md:text-6xl font-bold mb-6 bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">
           Create Videos with AI
