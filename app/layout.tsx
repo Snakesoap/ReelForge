@@ -1,6 +1,8 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import Script from 'next/script';
+import Header from './components/Header';
+import Footer from './components/Footer';
 
 export const metadata: Metadata = {
   title: 'ReelForge',
@@ -24,7 +26,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           `}
         </Script>
       </head>
-      <body>{children}</body>
+      <body className="min-h-screen flex flex-col bg-gradient-to-br from-slate-900 via-slate-900 to-slate-800 text-white">
+        <Header />
+        <main className="flex-1">
+          {children}
+        </main>
+        <Footer />
+      </body>
     </html>
   );
 }
