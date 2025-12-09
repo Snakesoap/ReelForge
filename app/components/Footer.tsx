@@ -15,7 +15,7 @@ export default function Footer() {
                 href="mailto:support@tryreelforge.com" 
                 className="text-cyan-400 hover:text-cyan-300 transition"
               >
-                feedback@reelforge.com
+                support@tryreelforge.com
               </a>
             </p>
           </div>
