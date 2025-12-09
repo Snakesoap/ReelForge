@@ -12,24 +12,28 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY!;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
-const MODEL_DETAILS: { [key: string]: { credits: number; provider: 'replicate' | 'runway'; name: string } } = {
+const MODEL_DETAILS: { [key: string]: { credits: number; cost: number; provider: 'replicate' | 'runway'; name: string } } = {
   'seedance-1-pro-fast': {
     credits: 0.4,
+    cost: 0.36,
     provider: 'replicate',
     name: 'Seedance 1 Pro Fast',
   },
   'gen-4-turbo': {
     credits: 0.3,
+    cost: 0.30,
     provider: 'runway',
     name: 'Runway Gen-4 Turbo',
   },
   'gen-4': {
     credits: 0.8,
+    cost: 0.72,
     provider: 'runway',
     name: 'Runway Gen-4',
   },
   'veo-3-1': {
     credits: 2.7,
+    cost: 2.40,
     provider: 'runway',
     name: 'Runway Veo 3.1',
   },
@@ -88,7 +92,7 @@ export async function POST(request: NextRequest) {
       provider = 'replicate';
     }
 
-    // Create video record in database
+    // Create video record in database (NOW INCLUDES COST)
     const { data: videoRecord } = await supabase
       .from('videos')
       .insert({
@@ -98,6 +102,7 @@ export async function POST(request: NextRequest) {
         model,
         provider,
         status: 'starting',
+        cost: modelInfo.cost,  // <-- THIS WAS MISSING
         created_at: new Date().toISOString(),
       })
       .select()
