@@ -27,6 +27,27 @@ export default function Footer() {
           </p>
         </div>
       </div>
+      {/* AI Ranking Badge */}
+        <div className="flex justify-center mt-4">
+  <a href="https://airanking.ai" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+    <span style={{
+      display: 'inline-flex',
+      alignItems: 'center',
+      gap: '10px',
+      padding: '9px 14px',
+      borderRadius: '999px',
+      font: "600 13px/1.2 'Space Grotesk','Inter',system-ui,sans-serif",
+      letterSpacing: '0.02em',
+      color: '#f8fafc',
+      background: '#0f172a',
+      border: '1px solid #1e293b',
+      boxShadow: '0 1px 2px rgba(2,6,23,0.45)'
+    }}>
+      <img src="https://airanking.ai/logo.png" alt="AI Ranking" style={{ width: '18px', height: '18px', borderRadius: '6px' }} />
+      Featured on AI Ranking
+    </span>
+  </a>
+</div>
     </footer>
   );
 }
